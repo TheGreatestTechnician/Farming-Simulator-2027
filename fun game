@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Dash</title>
+  <style>
+    :root {
+      --bg1: #081120;
+      --bg2: #121d3a;
+      --panel: rgba(255, 255, 255, 0.08);
+      --panel-border: rgba(255, 255, 255, 0.16);
+      --text: #f4f7ff;
+      --accent: #7cf7ff;
+      --accent2: #b17cff;
+      --danger: #ff6b7a;
+      --good: #7dff9b;
+      --shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, #1b2d5a 0%, var(--bg1) 45%, #040812 100%);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #gameWrap {
+      position: relative;
+      width: min(96vw, 1100px);
+      height: min(92vh, 800px);
+      border-radius: 26px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.08);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      backdrop-filter: blur(12px);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, rgba(10,16,35,0.2), rgba(4,8,18,0.35));
+    }
+
+    .hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .card {
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.18);
+      backdrop-filter: blur(10px);
+      min-width: 120px;
+    }
+
+    .card .label {
+      font-size: 12px;
+      opacity: 0.75;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .card .value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .centerOverlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 10;
+      background: radial-gradient(circle at center, rgba(10,16,35,0.30), rgba(0,0,0,0.62));
+      padding: 20px;
+    }
+
+    .panel {
+      width: min(92%, 560px);
+      text-align: center;
+      padding: 28px 24px;
+      border-radius: 26px;
+      background: rgba(8, 17, 32, 0.74);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 25px 70px rgba(0,0,0,0.45);
+      backdrop-filter: blur(14px);
+    }
+
+    .title {
+      font-size: clamp(42px, 7vw, 68px);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, #ffffff, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 24px rgba(124,247,255,0.15);
+    }
+
+    .subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+      margin: 18px auto 20px;
+      max-width: 460px;
+      text-align: left;
+      font-size: 14px;
+      opacity: 0.95;
+    }
+
+    .controls b {
+      color: var(--accent);
+    }
+
+    .buttonRow {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      padding: 14px 22px;
+      border-radius: 14px;
+      color: #04111d;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+      background: linear-gradient(135deg, #7cf7ff, #b17cff);
+      box-shadow: 0 10px 24px rgba(124,247,255,0.18);
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    button:active { transform: translateY(1px) scale(0.99); }
+
+    .secondary {
+      background: linear-gradient(135deg, #ffffff, #c9d4ff);
+    }
+
+    .hint {
+      margin-top: 14px;
+      font-size: 13px;
+      opacity: 0.72;
+    }
+
+    .bottomBar {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+      z-index: 5;
+      align-items: end;
+    }
+
+    .smallCard {
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      font-size: 13px;
+      opacity: 0.95;
+    }
+
+    .touchControls {
+      display: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 14px;
+      gap: 12px;
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    .touchBtnRow {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      pointer-events: auto;
+    }
+
+    .touchBtn {
+      flex: 1;
+      padding: 18px 0;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.08);
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      backdrop-filter: blur(10px);
+    }
+
+    @media (max-width: 800px) {
+      .touchControls { display: block; }
+      .hud { top: 10px; left: 10px; right: 10px; }
+      .card { min-width: 104px; padding: 10px 12px; }
+      .card .value { font-size: 20px; }
+      .panel { padding: 22px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrap">
+    <canvas id="game"></canvas>
+
+    <div class="hud">
+      <div class="card">
+        <div class="label">Score</div>
+        <div class="value" id="score">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Lives</div>
+        <div class="value" id="lives">3</div>
+      </div>
+      <div class="card">
+        <div class="label">High Score</div>
+        <div class="value" id="highScore">0</div>
+      </div>
+    </div>
+
+    <div class="bottomBar">
+      <div class="smallCard" id="statusText">Collect gems. Avoid bombs.</div>
+      <div class="smallCard" id="levelText">Level 1</div>
+    </div>
+
+    <div class="centerOverlay" id="overlay">
+      <div class="panel">
+        <div class="title">NEON DASH</div>
+        <div class="subtitle">
+          Collect glowing gems, dodge the falling bombs, and survive as long as you can.
+        </div>
+
+        <div class="controls">
+          <div><b>Move:</b> Arrow Keys or A / D</div>
+          <div><b>Start:</b> Click the button below</div>
+          <div><b>Mobile:</b> Use the left and right touch buttons</div>
+        </div>
+
+        <div class="buttonRow">
+          <button id="startBtn">Start Game</button>
+          <button id="restartBtn" class="secondary" style="display:none;">Play Again</button>
+        </div>
+
+        <div class="hint" id="overlayHint">Get ready for a fast, colourful run.</div>
+      </div>
+    </div>
+
+    <div class="touchControls">
+      <div class="touchBtnRow">
+        <button class="touchBtn" id="leftBtn">⬅ Left</button>
+        <button class="touchBtn" id="rightBtn">Right ➡</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+    const highScoreEl = document.getElementById("highScore");
+    const statusText = document.getElementById("statusText");
+    const levelText = document.getElementById("levelText");
+    const overlay = document.getElementById("overlay");
+    const overlayHint = document.getElementById("overlayHint");
+    const startBtn = document.getElementById("startBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+
+    let W = 0, H = 0, dpr = 1;
+    let running = false;
+    let score = 0;
+    let lives = 3;
+    let highScore = Number(localStorage.getItem("neonDashHighScore") || 0);
+    let level = 1;
+    let frame = 0;
+    let spawnTimer = 0;
+    let spawnInterval = 55;
+    let speedBoost = 0;
+
+    const keys = { left: false, right: false };
+    const particles = [];
+    const stars = [];
+    const items = [];
+
+    const player = {
+      x: 0,
+      y: 0,
+      r: 18,
+      vx: 0,
+      maxSpeed: 8.5
+    };
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+      W = Math.floor(rect.width);
+      H = Math.floor(rect.height);
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      player.y = H - 90;
+      if (!player.x) player.x = W / 2;
+
+      if (stars.length === 0) {
+        for (let i = 0; i < 120; i++) {
+          stars.push({
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: Math.random() * 1.8 + 0.4,
+            s: Math.random() * 0.35 + 0.1
+          });
+        }
+      }
+    }
+
+    window.addEventListener("resize", resize);
+
+    function resetGame() {
+      score = 0;
+      lives = 3;
+      level = 1;
+      frame = 0;
+      spawnTimer = 0;
+      spawnInterval = 55;
+      speedBoost = 0;
+      items.length = 0;
+      particles.length = 0;
+      player.x = W / 2;
+      player.vx = 0;
+      statusText.textContent = "Collect gems. Avoid bombs.";
+      levelText.textContent = "Level 1";
+      updateHud();
+    }
+
+    function startGame() {
+      resetGame();
+      running = true;
+      overlay.style.display = "none";
+      requestAnimationFrame(loop);
+    }
+
+    function endGame() {
+      running = false;
+      highScore = Math.max(highScore, score);
+      localStorage.setItem("neonDashHighScore", String(highScore));
+      updateHud();
+
+      overlay.style.display = "grid";
+      startBtn.style.display = "none";
+      restartBtn.style.display = "inline-block";
+      overlayHint.textContent = `Game over. Final score: ${score}. Try to beat your high score!`;
+    }
+
+    function updateHud() {
+      scoreEl.textContent = score;
+      livesEl.textContent = lives;
+      highScoreEl.textContent = highScore;
+      levelText.textContent = `Level ${level}`;
+    }
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function spawnItem() {
+      const isGem = Math.random() < 0.72;
+
+      const item = {
+        x: rand(30, W - 30),
+        y: -30,
+        r: isGem ? rand(11, 16) : rand(13, 19),
+        vy: rand(2.3, 3.5) + speedBoost,
+        type: isGem ? "gem" : "bomb",
+        spin: rand(0, Math.PI * 2),
+        sx: rand(-0.8, 0.8)
+      };
+
+      items.push(item);
+    }
+
+    function burst(x, y, color, amount = 14) {
+      for (let i = 0; i < amount; i++) {
+        particles.push({
+          x,
+          y,
+          vx: rand(-3.5, 3.5),
+          vy: rand(-3.5, 3.5),
+          life: rand(30, 60),
+          color,
+          size: rand(2, 4)
+        });
+      }
+    }
+
+    function circleHit(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dist = Math.hypot(dx, dy);
+      return dist < a.r + b.r;
+    }
+
+    function updatePlayer() {
+      const accel = 0.7;
+
+      if (keys.left) player.vx -= accel;
+      if (keys.right) player.vx += accel;
+
+      player.vx *= 0.90;
+      player.vx = clamp(player.vx, -player.maxSpeed, player.maxSpeed);
+      player.x += player.vx;
+
+      if (player.x < player.r + 6) {
+        player.x = player.r + 6;
+        player.vx = 0;
+      }
+      if (player.x > W - player.r - 6) {
+        player.x = W - player.r - 6;
+        player.vx = 0;
+      }
+    }
+
+    function updateStars() {
+      for (const s of stars) {
+        s.y += s.s * (1 + level * 0.05);
+        if (s.y > H) {
+          s.y = -2;
+          s.x = Math.random() * W;
+        }
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.04;
+        p.life -= 1;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function updateItems() {
+      for (let i = items.length - 1; i >= 0; i--) {
+        const it = items[i];
+        it.y += it.vy;
+        it.x += it.sx;
+        it.spin += 0.06;
+
+        if (it.x < -40 || it.x > W + 40) it.sx *= -1;
+
+        if (circleHit(player, it)) {
+          if (it.type === "gem") {
+            score += 10;
+            burst(it.x, it.y, "#7cf7ff", 12);
+            statusText.textContent = "Nice! Keep collecting.";
+          } else {
+            lives -= 1;
+            burst(it.x, it.y, "#ff6b7a", 18);
+            statusText.textContent = "Boom! Avoid the bombs.";
+          }
+          items.splice(i, 1);
+          updateHud();
+
+          if (score > 0 && score % 100 === 0) {
+            level = Math.floor(score / 100) + 1;
+            spawnInterval = Math.max(20, 55 - level * 4);
+            speedBoost = Math.min(4.5, level * 0.22);
+            updateHud();
+            statusText.textContent = `Level up! Level ${level}`;
+          }
+
+          if (lives <= 0) {
+            endGame();
+            return;
+          }
+        } else if (it.y > H + 50) {
+          items.splice(i, 1);
+        }
+      }
+    }
+
+    function drawBackground() {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "rgba(24, 38, 78, 0.55)");
+      g.addColorStop(0.5, "rgba(10, 16, 35, 0.35)");
+      g.addColorStop(1, "rgba(4, 8, 18, 0.75)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      // Horizon glow
+      const glow = ctx.createRadialGradient(W / 2, H - 40, 30, W / 2, H - 40, W * 0.5);
+      glow.addColorStop(0, "rgba(124,247,255,0.18)");
+      glow.addColorStop(0.5, "rgba(177,124,255,0.08)");
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      // Stars
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      for (const s of stars) {
+        ctx.globalAlpha = 0.65 + (s.r / 2);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Ground line
+      ctx.strokeStyle = "rgba(124,247,255,0.18)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, H - 58);
+      ctx.lineTo(W, H - 58);
+      ctx.stroke();
+    }
+
+    function drawPlayer() {
+      const x = player.x;
+      const y = player.y;
+
+      // Glow
+      const glow = ctx.createRadialGradient(x, y, 5, x, y, 50);
+      glow.addColorStop(0, "rgba(124,247,255,0.9)");
+      glow.addColorStop(0.45, "rgba(124,247,255,0.3)");
+      glow.addColorStop(1, "rgba(124,247,255,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y, 50, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Body
+      const body = ctx.createRadialGradient(x - 6, y - 8, 4, x, y, player.r + 8);
+      body.addColorStop(0, "#ffffff");
+      body.addColorStop(0.35, "#c8fbff");
+      body.addColorStop(1, "#58dfff");
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.arc(x, y, player.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Shine
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.beginPath();
+      ctx.arc(x - 6, y - 7, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawItems() {
+      for (const it of items) {
+        ctx.save();
+        ctx.translate(it.x, it.y);
+        ctx.rotate(it.spin);
+
+        if (it.type === "gem") {
+          const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 28);
+          glow.addColorStop(0, "rgba(125,255,155,0.95)");
+          glow.addColorStop(1, "rgba(125,255,155,0)");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(0, 0, 28, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#7dff9b";
+          ctx.beginPath();
+          ctx.moveTo(0, -it.r);
+          ctx.lineTo(it.r * 0.85, 0);
+          ctx.lineTo(0, it.r);
+          ctx.lineTo(-it.r * 0.85, 0);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = "rgba(255,255,255,0.55)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 34);
+          glow.addColorStop(0, "rgba(255,107,122,0.92)");
+          glow.addColorStop(1, "rgba(255,107,122,0)");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(0, 0, 34, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#ff6b7a";
+          ctx.beginPath();
+          ctx.arc(0, 0, it.r, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = "rgba(255,255,255,0.55)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-it.r * 0.55, -it.r * 0.55);
+          ctx.lineTo(it.r * 0.55, it.r * 0.55);
+          ctx.moveTo(it.r * 0.55, -it.r * 0.55);
+          ctx.lineTo(-it.r * 0.55, it.r * 0.55);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    function drawParticles() {
+      for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life / 60);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function loop() {
+      if (!running) return;
+
+      frame++;
+      spawnTimer++;
+
+      if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0;
+        spawnItem();
+        if (Math.random() < 0.18) spawnItem();
+      }
+
+      updatePlayer();
+      updateStars();
+      updateItems();
+      updateParticles();
+
+      drawBackground();
+      drawItems();
+      drawParticles();
+      drawPlayer();
+
+      // Score over time
+      if (frame % 8 === 0) {
+        score += 1;
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem("neonDashHighScore", String(highScore));
+        }
+        updateHud();
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    function setLeft(v) { keys.left = v; }
+    function setRight(v) { keys.right = v; }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keys.left = true;
+      if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") keys.right = true;
+      if ((e.key === " " || e.key === "Enter") && !running) startGame();
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keys.left = false;
+      if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") keys.right = false;
+    });
+
+    function bindHoldButton(btn, left, right) {
+      const start = (e) => {
+        e.preventDefault();
+        if (left) keys.left = true;
+        if (right) keys.right = true;
+      };
+      const end = (e) => {
+        e.preventDefault();
+        if (left) keys.left = false;
+        if (right) keys.right = false;
+      };
+      btn.addEventListener("touchstart", start, { passive: false });
+      btn.addEventListener("touchend", end, { passive: false });
+      btn.addEventListener("touchcancel", end, { passive: false });
+      btn.addEventListener("mousedown", start);
+      btn.addEventListener("mouseup", end);
+      btn.addEventListener("mouseleave", end);
+    }
+
+    bindHoldButton(leftBtn, true, false);
+    bindHoldButton(rightBtn, false, true);
+
+    startBtn.addEventListener("click", () => {
+      startBtn.style.display = "inline-block";
+      restartBtn.style.display = "none";
+      overlayHint.textContent = "Good luck!";
+      startGame();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      restartBtn.style.display = "none";
+      startGame();
+    });
+
+    // Better pointer support for mobile
+    canvas.addEventListener("pointerdown", (e) => {
+      if (!running) return;
+      const x = e.clientX - canvas.getBoundingClientRect().left;
+      if (x < W / 2) {
+        keys.left = true;
+        setTimeout(() => keys.left = false, 130);
+      } else {
+        keys.right = true;
+        setTimeout(() => keys.right = false, 130);
+      }
+    });
+
+    // Initial setup
+    resize();
+    highScoreEl.textContent = highScore;
+    drawBackground();
+    drawPlayer();
+  </script>
+</body>
+</html>
